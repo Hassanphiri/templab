@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temperature & Humidity Monitor</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        canvas {
+            width: 100%;
+            max-width: 600px;
+            height: 300px;
+        }
+    </style>
+    <script>
+        let temperatureData = [];
+        let humidityData = [];
+        let labels = [];
+
+        function fetchReadings() {
+            fetch('/api/readings/')
+                .then(response => response.json())
+                .then(data => {
+                    // Push new data to the arrays
+                    let timestamp = new Date(data.timestamp).toLocaleTimeString();
+                    labels.push(timestamp);
+                    temperatureData.push(data.temperature.toFixed(2));
+                    humidityData.push(data.humidity.toFixed(2));
+
+                    // Limit the length of data to the last 20 readings
+                    if (labels.length > 20) {
+                        labels.shift();
+                        temperatureData.shift();
+                        humidityData.shift();
+                    }
+
+                    // Update the graphs
+                    tempChart.update();
+                    humidityChart.update();
+                });
+        }
+
+        let tempChart, humidityChart;
+
+        window.onload = function() {
+            // Create the temperature chart
+            const ctx1 = document.getElementById('temperatureChart').getContext('2d');
+            tempChart = new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Temperature (°C)',
+                        data: temperatureData,
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        fill: true
+                    }]
+                },
+                options: {
+                    scales: {
+                        x: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Time'
+                            }
+                        },
+                        y: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Temperature (°C)'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Create the humidity chart
+            const ctx2 = document.getElementById('humidityChart').getContext('2d');
+            humidityChart = new Chart(ctx2, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Humidity (%)',
+                        data: humidityData,
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        fill: true
+                    }]
+                },
+                options: {
+                    scales: {
+                        x: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Time'
+                            }
+                        },
+                        y: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Humidity (%)'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Fetch new readings every 2 seconds
+            setInterval(fetchReadings, 2000);
+        }
+
+        
+        window.onload = fetchHistoricalData;  // Fetch historical data when the page loads
+    </script>
+</head>
+<body>
+    <h1>Real-Time Temperature & Humidity Monitor</h1>
+
+    <h2>Temperature</h2>
+    <canvas id="temperatureChart"></canvas>
+
+    <h2>Humidity</h2>
+    <canvas id="humidityChart"></canvas>
+</body>
+</html>
+

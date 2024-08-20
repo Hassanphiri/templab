@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temperature & Humidity Monitor</title>
+    <script>
+        function fetchReadings() {
+            fetch('/api/readings/')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('temperature').innerText = data.temperature.toFixed(2) + '°C';
+                    document.getElementById('humidity').innerText = data.humidity.toFixed(2) + '%';
+                    document.getElementById('timestamp').innerText = data.timestamp;
+                });
+        }
+
+        setInterval(fetchReadings, 2000);  // Fetch data every 2 seconds
+    </script>
+</head>
+<body>
+    <h1>Real-Time Temperature & Humidity Monitor</h1>
+    <p>Temperature: <span id="temperature">Loading...</span></p>
+    <p>Humidity: <span id="humidity">Loading...</span></p>
+    <p>Time: <span id="timestamp">Loading...</span></p>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+from django.http import JsonResponse
+from django.shortcuts import render
+from django.views.decorators.csrf import csrf_exempt
+from django.utils import timezone
+from .models import Reading
+import json
+
+
+
+def index(request):
+    try:
+        # Try to fetch the latest reading
+        latest_reading = Reading.objects.latest('timestamp')
+    except Reading.DoesNotExist:
+        # Handle the case where no readings are in the database
+        latest_reading = None
+
+    # Pass the latest reading to the template
+    return render(request, 'monitor/index.html', {'latest_reading': latest_reading})
+    
+    
+
+@csrf_exempt
+def api_readings(request):
+    if request.method == 'POST':
+        try:
+            # Parse the JSON data sent from ESP32
+            data = json.loads(request.body)
+            temperature = data.get('temperature')
+            humidity = data.get('humidity')
+
+            # Validate the data
+            if temperature is not None and humidity is not None:
+                # Store the data in the database
+                Reading.objects.create(temperature=temperature, humidity=humidity, timestamp=timezone.now())
+
+                # Respond to ESP32 with a success message
+                return JsonResponse({"status": "success", "message": "Data received"})
+            else:
+                return JsonResponse({"status": "fail", "message": "Invalid data"}, status=400)
+
+        except json.JSONDecodeError:
+            return JsonResponse({"status": "fail", "message": "Invalid JSON format"}, status=400)
+
+    elif request.method == 'GET':
+        try:
+            # Fetch the latest reading
+            latest_reading = Reading.objects.latest('timestamp')
+            data = {
+                'temperature': latest_reading.temperature,
+                'humidity': latest_reading.humidity,
+                'timestamp': latest_reading.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+            }
+            return JsonResponse(data)
+        except Reading.DoesNotExist:
+            return JsonResponse({"status": "fail", "message": "No readings found"}, status=404)
+    
+    else:
+        return JsonResponse({"status": "fail", "message": "Invalid request method"}, status=405)
