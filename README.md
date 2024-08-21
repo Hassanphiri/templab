@@ -1,0 +1,1 @@
+senses temperature and humidity
