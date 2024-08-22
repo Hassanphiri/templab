@@ -51,7 +51,7 @@ def api_readings(request):
             data = {
                 'temperature': latest_reading.temperature,
                 'humidity': latest_reading.humidity,
-                'timestamp': latest_reading.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+                'timestamp': local_time.strftime("%Y-%m-%d %H:%M:%S"),
             }
             return JsonResponse(data)
         except Reading.DoesNotExist:
