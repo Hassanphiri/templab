@@ -47,6 +47,7 @@ def api_readings(request):
     elif request.method == 'GET':
         try:
             latest_reading = Reading.objects.latest('timestamp')
+            local_time = timezone.localtime(latest_reading.timestamp)
             data = {
                 'temperature': latest_reading.temperature,
                 'humidity': latest_reading.humidity,
